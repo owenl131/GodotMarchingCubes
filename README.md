@@ -2,4 +2,4 @@
 
 ![](screenshots/screenshot.png)
 
-Implemented without using a lookup table approach.
+Implemented without using a lookup table approach. Screenshot built from a piece of OpenSimplexNoise.
