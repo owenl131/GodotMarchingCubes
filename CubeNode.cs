@@ -113,12 +113,14 @@ public class CubeNode
         // if (x + y + z == 3) return 1;
         
         // return -1;
-        float bounds = MarchingCubes.CubeWidth * MarchingCubes.NumCubesPerAxis - 0.5f;
+        float offset = 0.1f;
+        float bounds = MarchingCubes.CubeWidth * MarchingCubes.NumCubesPerAxis - offset;
+        
         if (worldCoords.x > bounds || worldCoords.y > bounds || worldCoords.z > bounds)
         {
             return 1;
         }
-        if (worldCoords.x < 0.5f || worldCoords.y < 0.5f || worldCoords.z < 0.5f)
+        if (worldCoords.x < offset || worldCoords.y < offset || worldCoords.z < offset)
         {
             return 1;
         }
