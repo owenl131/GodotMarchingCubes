@@ -61,6 +61,18 @@ public class CubeNode
         return p + (nbP - p) * (val / (val + nbVal));
     }
 
+    public Vector3 Normal(Vector3 point)
+    {
+        float delta = width / 2;
+        float val = Eval(point);
+        Vector3 normal = new Vector3(
+            (Eval(new Vector3(delta, 0, 0) + point) - val) / delta,
+            (Eval(new Vector3(0, delta, 0) + point) - val) / delta,
+            (Eval(new Vector3(0, 0, delta) + point) - val) / delta
+        );
+        return normal.Normalized();
+    }
+
     public int Index()
     {
         return x * 4 + y * 2 + z;
@@ -72,6 +84,12 @@ public class CubeNode
     }
 
     public float Eval()
+    {
+        Vector3 worldCoords = Coords();
+        return Eval(worldCoords);
+    }
+
+    public float Eval(Vector3 worldCoords)
     {
         // Single
         // if (x * y * z == 1) return 1;
@@ -95,8 +113,16 @@ public class CubeNode
         // if (x + y + z == 3) return 1;
         
         // return -1;
-
-        return noise.GetNoise3dv(Coords());
+        float bounds = MarchingCubes.CubeWidth * MarchingCubes.NumCubesPerAxis - 0.5f;
+        if (worldCoords.x > bounds || worldCoords.y > bounds || worldCoords.z > bounds)
+        {
+            return 1;
+        }
+        if (worldCoords.x < 0.5f || worldCoords.y < 0.5f || worldCoords.z < 0.5f)
+        {
+            return 1;
+        }
+        return noise.GetNoise3dv(worldCoords);
     }
 
     public bool IsIn()

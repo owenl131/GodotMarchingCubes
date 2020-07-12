@@ -5,19 +5,20 @@ public class Cube : Spatial
 {
     OpenSimplexNoise noise;
     float width;
-
-    ImmediateGeometry geometry;
+    public bool debug = false;
+    public int cubeIndex;
+    public MeshBuilder meshBuilder;
 
     public Cube()
     {
 
     }
 
-    public Cube(float width, OpenSimplexNoise noise, ImmediateGeometry geometry)
+    public Cube(int cubeIndex, float width, OpenSimplexNoise noise)
     {
+        this.cubeIndex = cubeIndex;
         this.width = width;
         this.noise = noise;
-        this.geometry = geometry;
     }
 
     public IEnumerable<CubeNode> Vertices()
@@ -34,40 +35,31 @@ public class Cube : Spatial
         }
     }
 
-    public void AddTriangle(Vector3 a, Vector3 b, Vector3 c)
-    {
-        Vector3 normal = (b - c).Cross(a - c).Normalized();
-        geometry.SetNormal(normal);
-        geometry.AddVertex(a);
-        geometry.AddVertex(b);
-        geometry.AddVertex(c);
-        
-        geometry.SetNormal(-normal);
-        geometry.AddVertex(c);
-        geometry.AddVertex(b);
-        geometry.AddVertex(a);
-    }
 
     public void Draw()
     {
-        geometry.Begin(Mesh.PrimitiveType.Triangles);
-
         bool[] processed = new bool[8];
 
         foreach (CubeNode nd in Vertices())
         {
+            if (debug)
+                GD.Print(nd.x, " ", nd.y, " ", nd.z, " ", nd.IsIn());
+
             if (processed[nd.Index()]) 
             {
                 continue;
             }
 
             HashSet<CubeNode> connected = nd.AllConnected();
-            // GD.Print(connected.Count);
+            if (debug)
+                GD.Print(connected.Count);
 
             if (connected.Count == 1)
             {
-                // GD.Print("Single");
-                AddTriangle(nd.Intermediate(0), nd.Intermediate(1), nd.Intermediate(2));
+                if (debug)
+                    GD.Print("Single");
+
+                meshBuilder.AddTriangle(cubeIndex, nd, 0, nd, 1, nd, 2);
                 processed[nd.Index()] = true;
                 continue;
             }
@@ -81,17 +73,13 @@ public class Cube : Spatial
                 CubeNode n2 = e.Current;
 
                 int nbAxis = n1.WhichAxis(n2);
-                AddTriangle(
-                    n1.Intermediate((nbAxis + 1) % 3), 
-                    n2.Intermediate((nbAxis + 1) % 3), 
-                    n2.Intermediate((nbAxis + 2) % 3)
-                );
-                AddTriangle(
-                    n2.Intermediate((nbAxis + 2) % 3),
-                    n1.Intermediate((nbAxis + 2) % 3),
-                    n1.Intermediate((nbAxis + 1) % 3)
-                );
-                // GD.Print("Double");
+                
+                meshBuilder.AddTriangle(cubeIndex, n1, (nbAxis + 1) % 3, n2, (nbAxis + 1) % 3, n2, (nbAxis + 2) % 3);
+                meshBuilder.AddTriangle(cubeIndex, n2, (nbAxis + 2) % 3, n1, (nbAxis + 2) % 3, n1, (nbAxis + 1) % 3);
+
+                if (debug)
+                    GD.Print("Double");
+
                 processed[n1.Index()] = true;
                 processed[n2.Index()] = true;
                 continue;
@@ -120,25 +108,17 @@ public class Cube : Spatial
                 CubeNode nb2 = md.Nb((axis + 2) % 3);
                 Vector3 intermediate1 = nb1.Intermediate(axis);
                 Vector3 intermediate2 = nb2.Intermediate(axis);
+
                 // parallel
-                AddTriangle(
-                    md.Intermediate(axis),
-                    intermediate1,
-                    intermediate2
-                );
+                meshBuilder.AddTriangle(cubeIndex, md, axis, nb1, axis, nb2, axis);
                 // part 1
-                AddTriangle(
-                    intermediate1,
-                    intermediate2,
-                    nb1.Intermediate((axis + 2) % 3)
-                );
+                meshBuilder.AddTriangle(cubeIndex, nb1, axis, nb2, axis, nb1, (axis + 2) % 3);
                 // part 2
-                AddTriangle(
-                    nb1.Intermediate((axis + 2) % 3),
-                    nb2.Intermediate((axis + 1) % 3),
-                    intermediate2
-                );
-                // GD.Print("Trio");
+                meshBuilder.AddTriangle(cubeIndex, nb1, (axis + 2) % 3, nb2, (axis + 1) % 3, nb2, axis);
+
+                if (debug)
+                    GD.Print("Trio");
+
                 processed[md.Index()] = true;
                 processed[nb1.Index()] = true;
                 processed[nb2.Index()] = true;
@@ -185,27 +165,14 @@ public class Cube : Spatial
                 CubeNode n1 = mid.Nb(1);
                 CubeNode n2 = mid.Nb(2);
 
-                AddTriangle(
-                    n0.Intermediate(1),
-                    n1.Intermediate(0),
-                    n1.Intermediate(2)
-                );
-                AddTriangle(
-                    n0.Intermediate(1),
-                    n1.Intermediate(2),
-                    n0.Intermediate(2)
-                );
-                AddTriangle(
-                    n1.Intermediate(2),
-                    n0.Intermediate(2),
-                    n2.Intermediate(1)
-                );
-                AddTriangle(
-                    n0.Intermediate(2),
-                    n2.Intermediate(1),
-                    n2.Intermediate(0)
-                );
-                // GD.Print("Tetra");
+                meshBuilder.AddTriangle(cubeIndex, n0, 1, n1, 0, n1, 2);
+                meshBuilder.AddTriangle(cubeIndex, n0, 1, n1, 2, n0, 2);
+                meshBuilder.AddTriangle(cubeIndex, n1, 2, n0, 2, n2, 1);
+                meshBuilder.AddTriangle(cubeIndex, n0, 2, n2, 1, n2, 0);
+
+                if (debug)
+                    GD.Print("Tetra");
+
                 processed[mid.Index()] = true;
                 processed[n0.Index()] = true;
                 processed[n1.Index()] = true;
@@ -228,18 +195,17 @@ public class Cube : Spatial
                 if (sameZ) axis = 2;
 
                 // plane
-                AddTriangle(
-                    nd.Intermediate(axis),
-                    nd.Nb((axis + 1) % 3).Intermediate(axis),
-                    nd.Nb((axis + 2) % 3).Intermediate(axis)
-                );
-                AddTriangle(
-                    nd.Nb((axis + 1) % 3).Intermediate(axis),
-                    nd.Nb((axis + 2) % 3).Intermediate(axis),
-                    nd.Nb((axis + 1) % 3).Nb((axis + 2) % 3).Intermediate(axis)
-                );
+                meshBuilder.AddTriangle(cubeIndex, 
+                    nd, axis, 
+                    nd.Nb((axis + 1) % 3), axis, 
+                    nd.Nb((axis + 2) % 3), axis);
+                meshBuilder.AddTriangle(cubeIndex, 
+                    nd.Nb((axis + 1) % 3), axis, 
+                    nd.Nb((axis + 2) % 3), axis, 
+                    nd.Nb((axis + 1) % 3).Nb((axis + 2) % 3), axis);
 
-                // GD.Print("Plane");
+                if (debug)
+                    GD.Print("Plane");
                 foreach (CubeNode c in connected)
                 {
                     processed[c.Index()] = true;
@@ -282,27 +248,14 @@ public class Cube : Spatial
             int axis2 = l2.WhichAxis(l3);
             int axis3 = l3.WhichAxis(l4);
 
-            AddTriangle(
-                l1.Intermediate(axis3),
-                l2.Intermediate(axis3),
-                l1.Intermediate(axis2)
-            );
-            AddTriangle(
-                l1.Intermediate(axis2),
-                l3.Intermediate(axis1),
-                l4.Intermediate(axis1)
-            );
-            AddTriangle(
-                l2.Intermediate(axis3),
-                l1.Intermediate(axis2),
-                l4.Intermediate(axis1)
-            );
-            AddTriangle(
-                l2.Intermediate(axis3),
-                l4.Intermediate(axis1),
-                l4.Intermediate(axis2)
-            );
-            // GD.Print("Line");
+            meshBuilder.AddTriangle(cubeIndex, l1, axis3, l2, axis3, l1, axis2);
+            meshBuilder.AddTriangle(cubeIndex, l1, axis2, l3, axis1, l4, axis1);
+            meshBuilder.AddTriangle(cubeIndex, l2, axis3, l1, axis2, l4, axis1);
+            meshBuilder.AddTriangle(cubeIndex, l2, axis3, l4, axis1, l4, axis2);
+
+            if (debug)
+                GD.Print("Line");
+
             foreach (CubeNode c in connected)
             {
                 processed[c.Index()] = true;
@@ -310,7 +263,7 @@ public class Cube : Spatial
             continue;
         }
 
-        geometry.End();
+        // geometry.End();
     }
 
 

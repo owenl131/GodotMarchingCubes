@@ -57,6 +57,7 @@
     <Compile Include="Cube.cs" />
     <Compile Include="CubeNode.cs" />
     <Compile Include="MarchingCubes.cs" />
+    <Compile Include="MeshBuilder.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
